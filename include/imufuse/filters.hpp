@@ -80,14 +80,18 @@ class Mahony {
 
 // 3. Multiplicative EKF. Nominal state is the quaternion and the gyro bias; the error state is
 // [small rotation (3), bias error (3)]. Accelerometer and magnetometer each give a direction measurement.
+// Lives outside Ekf: gcc and clang refuse a nested struct with default member initialisers as a
+// default argument of the enclosing class's constructor (MSVC accepts it).
+struct EkfNoise {
+  double gyro = 0.01;      // rad/s/sqrt(Hz)-ish, per step
+  double bias_walk = 1e-4; // how fast the bias may drift
+  double accel = 0.1;      // direction noise, unit vector units
+  double mag = 0.2;
+};
+
 class Ekf {
  public:
-  struct Noise {
-    double gyro = 0.01;      // rad/s/sqrt(Hz)-ish, per step
-    double bias_walk = 1e-4; // how fast the bias may drift
-    double accel = 0.1;      // direction noise, unit vector units
-    double mag = 0.2;
-  };
+  using Noise = EkfNoise;
   explicit Ekf(Noise n = {}) : n_(n) {
     P_ = Mat<6, 6>::identity() * 0.5;
     for (int i = 3; i < 6; ++i) P_(static_cast<std::size_t>(i), static_cast<std::size_t>(i)) = 1e-3;
